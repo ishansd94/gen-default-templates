@@ -1,0 +1,17 @@
+- name: k8s
+  description: Kubernetes native app to interact with Kubernates API.
+  options:
+    replace:
+      - "dir.exec": $pkg
+      - "file.exec": $pkg
+  vars:
+    - name: app
+      desc: Go project path.
+    - name: pkg
+      desc: Main executable for the Go project.
+    - name: docker_username
+      desc: Docker username.
+    - name: docker_image
+      desc: Docker image name.
+    - name: k8s_object
+      desc: k8s cluter role binding k8s resource

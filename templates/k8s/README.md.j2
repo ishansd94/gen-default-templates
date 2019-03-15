@@ -1,0 +1,133 @@
+# {{ template._name }}
+Web service to create kubernetes {{ template.k8s_object }}s.
+
+### Pre-requisites
+
+```
+1. https://github.com/go-task/task (Makefile alternative.)
+2. GO
+3. https://github.com/golang/dep (Go dependency manager)
+```
+
+### Installation
+
+Clone the repo in your $GOPATH.
+This project uses Dep (Golang vendoring tool) https://github.com/golang/dep
+
+```sh
+$ cd $GOPATH/src/gitlab.com/pearson-techops-user-experience/{{ template._name_lc }}
+$ task install
+$ task run
+```
+*NOTE: Default port is ```:8000```. Port can be changed by setting ```PORT``` environment variable*
+
+### Build
+
+Build parameters are available in the ```Taskfile.yml```
+Change ```USERNAME``` and ```IMAGE``` parameters with your docker hub username and desired image name.
+
+```sh
+$ task build
+```
+If you use separate key for gitlab/github, change the location of the private key file.
+```
+SSH_PRIVATE_KEY: $(cat ~/.ssh/id_rsa)
+```
+
+### Usage
+In order for {{ template._name_lc }} to work the ```ServiceAccount``` within the pod where it's running should have the necessary RBAC permissions.
+
+```
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+    name: {{ template._name_lc }}
+rules:
+  - apiGroups: [""]
+    resources: ["{{template.k8s_object}}"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ template._name_lc }}
+subjects:
+  - kind: Group
+    name: system:serviceaccounts
+    apiGroup: ""
+roleRef:
+  kind: ClusterRole
+  name: {{ template._name_lc }}
+  apiGroup: rbac.authorization.k8s.io
+```
+
+##### Deploy to Kubernetes
+
+Create a seperate ```namespace``` for {{ template._name }} ex: ```app``` and create a ```deployment```.
+
+```
+$ kubectl create ns app
+$ kubectl create deployment {{ template._name_lc }} --image={{ template.docker_username }}/{{ template.docker_image }} -n app
+```
+
+##### Using web service
+
+Get the pod ip using,
+```
+$ kubectl get pods -n app -o wide
+```
+##### Payloads
+---
+##### 1. Creating {{ template.k8s_object }}
+
+Expected payload as a ```POST``` request.
+
+```
+{
+    "name": <name of the {{ template.k8s_object }}, string>,
+    "namespace": <kubernetes namespace, string>
+    <placeholder>
+}
+``` 
+
+```
+$ curl -d '{"name":"foo", "namespace":"app", <placeholder>}' -H "Content-Type: application/json" -X POST <kube-secrets pod ip>:8000
+```
+
+##### 2. Updating {{ template.k8s_object }}
+
+Expected payload as a ```PUT``` request.
+
+```
+{
+    "name": <name of the {{ template.k8s_object }}, string>,
+    "namespace": <kubernetes namespace, string>,
+    <placeholder>
+}
+``` 
+
+```
+$ curl -d '{"name":"foo", "namespace":"app", <placeholder>}' -H "Content-Type: application/json" -X PUT <kube-secrets pod ip>:8000
+
+
+##### 3. Listing {{ template.k8s_object }}s
+- **Listing a particular {{ template.k8s_object }}**
+```
+$ curl '<{{ template._name_lc }} pod ip>:8000/?namespace=<ns>&name=<name>'
+```
+
+- **Listing {{ template.k8s_object }} in a particular namespace**
+```
+$ curl '<{{ template._name_lc }} pod ip>:8000/?namespace=<ns>'
+```
+- **Listing all {{ template.k8s_object }}s**
+```
+$ curl '<{{ template._name_lc }} pod ip>:8000'
+```
+
+### Testing
+
+```
+$ task test
+```

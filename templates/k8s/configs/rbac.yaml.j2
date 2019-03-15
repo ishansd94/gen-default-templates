@@ -1,0 +1,22 @@
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+    name: {{ template._name_lc }}
+rules:
+  - apiGroups: [""]
+    resources: ["{{ template.k8s_object }}"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ template._name_lc }}
+subjects:
+  - kind: Group
+    name: system:serviceaccounts
+    apiGroup: ""
+roleRef:
+  kind: ClusterRole
+  name: {{ template._name_lc }}
+  apiGroup: rbac.authorization.k8s.io

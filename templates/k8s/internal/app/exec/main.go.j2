@@ -1,0 +1,139 @@
+package {{ template.pkg }}
+
+import (
+	"fmt"
+	"net/http"
+
+	k8slib "github.com/ericchiang/k8s"
+	"github.com/gin-gonic/gin"
+	"github.com/go-ozzo/ozzo-validation"
+	
+
+	"{{ template.app }}/internal/pkg/k8s"
+	"{{ template.app }}/internal/pkg/response"
+	"{{ template.app }}/pkg/log"
+)
+
+//SampleRequest represents the incoming request
+type SampleRequest struct {
+	Namespace string            `json:"namespace"`
+	Name      string            `json:"name"`
+	Content   map[string]string `json:"content"`
+}
+
+// Validate responsible for validating the incoming request with given rules
+func (r SampleRequest) Validate() error {
+	return validation.ValidateStruct(&r,
+		validation.Field(&r.Name, validation.Required),
+		validation.Field(&r.Namespace, validation.Required),
+	)
+}
+
+// Create responsible for creating a new resource
+func Create(c *gin.Context) {
+
+	var req SampleRequest
+	if err := c.BindJSON(&req); err != nil {
+		log.Warn("{{ template.pkg }}.Create", fmt.Sprintf("error while binding request.. %v", err.Error()))
+		response.Default(c, http.StatusBadRequest)
+		return
+	}
+
+	if err := req.Validate(); err != nil {
+		response.Custom(c, http.StatusBadRequest, gin.H{"errors": err})
+		return
+	}
+
+	client, err := k8sclient()
+	if err != nil {
+		response.Custom(c, http.StatusInternalServerError, gin.H{"errors": err})
+		log.Error("{{ template.pkg }}.Create", "error while creating k8s client", err)
+		return
+	}
+
+	h := k8s.NewHandler(client)
+
+	//Code goes here
+
+	response.Default(c, http.StatusCreated)
+}
+
+// Get responsible for retrieving resources
+func Get(c *gin.Context){
+
+	ns := c.DefaultQuery("namespace", "")
+	name := c.DefaultQuery("name", "")
+
+	if empty(ns) {
+		response.Default(c, http.StatusBadRequest)
+		return
+	}
+
+	client, err := k8sclient()
+	if err != nil {
+		response.Custom(c, http.StatusInternalServerError, gin.H{"errors": err})
+		log.Error("{{ template.pkg }}.Create", "error while creating k8s client", err)
+		return
+	}
+
+	h := k8s.NewHandler(client)
+
+	if empty(name) {
+		
+		//Code goes here
+
+	}
+
+	
+	//Code goes here
+	
+}
+
+// Update responsible for updating a resource
+func Update(c *gin.Context){
+
+	//Code goes here
+
+}
+
+
+// Delete responsible for deleting a reource
+func Delete(c *gin.Context){
+
+	//Code goes here
+
+}
+
+// handleK8sError check if the error is returned by k8s API or otherwise return false
+func handleK8sError(c *gin.Context,err error) bool {
+
+	if apierr, ok := err.(*k8slib.APIError); ok {
+		if apierr.Code == http.StatusNotFound {
+			response.Custom(c, http.StatusNotFound, gin.H{"error": err.Error()})
+			return true
+		}
+
+		if apierr.Code == http.StatusConflict {
+			response.Custom(c, http.StatusConflict, gin.H{"error": err.Error()})
+			return true
+		}
+	}
+
+	return false
+}
+
+// k8sclient creates new in cluster kubernetes client. 
+func k8sclient() (*k8slib.Client, error) {
+	client, err := k8slib.NewInClusterClient()
+	if err != nil {
+		log.Error("secret.k8sclient", "error creating k8 client", err)
+		return nil, err
+	}
+
+	return client, nil
+}
+
+// empty check if the given string is empty
+func empty(str string) bool {
+	return str == ""
+}
